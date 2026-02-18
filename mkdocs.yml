@@ -4,7 +4,7 @@ site_author: Gitalong
 repo_url: https://github.com/ivanmirakov/gitalong-spec
 
 theme:
-  name: material
+  name: readthedocs
   features:
     - navigation.sections
     - navigation.tracking
@@ -12,20 +12,8 @@ theme:
     - content.code.copy
   font:
     text: Ubuntu
-  palette:
-    - scheme: default
-      primary: deep orange
-      toggle:
-        icon: material/toggle-switch-off-outline
-        name: Switch to dark mode
-    - scheme: slate
-      primary: green
-      toggle:
-        icon: material/toggle-switch
-        name: Switch to light mode
 
 plugins:
-  - git-revision-date
   - search
 
 markdown_extensions:
