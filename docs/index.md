@@ -28,10 +28,12 @@ Distributed systems don't work like that. Even though you CAN spend hours resolv
 
 Other options very commonly don't even provide syncing logic.
 
-## Room Storage (Merkle DAG)
+## 1. Core Protocol
+
+### Room Storage (Merkle DAG)
 Our Merkle DAG implementation focuses on structural integrity while allowing for data privacy. By separating the "Timeline" (Nodes) from the "Payload" (Blobs), we can delete message content without breaking the cryptographic chain.
 
-### Overview
+#### Overview
 
 We maintain two distinct tables. The `nodes` table is the immutable skeleton of the chat, while the `blobs` table holds the potentially volatile message data.
 
@@ -39,7 +41,7 @@ We maintain two distinct tables. The `nodes` table is the immutable skeleton of 
 This table is strictly **append-only**. It defines the sequence of events.
 | Key | Type | Description |
 |-|-|-|
-| **hash** | SHA256 (PK) | Primary key. A hash of `contents_ref + parent_keys[]`
+| **hash** | SHA256 (PK) | Primary key. A hash of `contents_ref + parent_keys[]` |
 | **contents_ref** | SHA256 (FK) | A hash of the `contents` CJSON object, and a primary key to its corresponding element in the `blobs` table. |
 
 **2. The `edges` Table (The Relations)**
@@ -57,17 +59,17 @@ This table stores the actual CJSON message bodies. To support redaction, rows in
 | **hash** | SHA256 (PK) | The hash resulting from SHA256(data) |
 | **data** | CJSON | The data blob |
 
-### Methods
+#### Methods
 
-#### Create
+##### Create
 `create() -> [Ok(MerkleTree), Err(err)]`
 Initializes a new MerkleTree instance.
 
-#### Initialize
+##### Initialize
 `initialize(MerkleTree) -> [Ok(root_hash), Err()]`
 Creates the first node in a tree (e.g., for a new room). It generates a root `node` pointing to a room-initialization `blob`.
 
-#### Insert
+##### Insert
 `insert(parent_hash, content_blob) -> [Ok(node_hash), Err(err)]`
 To maintain the tree:
 1.  **Hash Content**: Calculate `content_hash = SHA256(content_blob)`.
@@ -77,11 +79,11 @@ To maintain the tree:
 
 > **Note on Salting:** To prevent hash collisions and ensure privacy, all `content_blob` payloads **MUST** include a `salt` field with random data. This ensures that identical messages result in unique hashes.
 
-#### Redact
+##### Redact
 `redact(content_hash) -> Ok()`
 Deletes the entry in the `blobs` table. This "hollows out" the message. Any client crawling the `nodes` table will still see the message's place in history, but will find the content missing (returning `null`).
 
-#### Get
+##### Get
 `get(node_hash) -> [Ok(Node + Blob), Err(err)]`
 Retrieves the node and its associated blob. If the blob has been redacted, the implementation should return the node metadata with the data field set to `null`.
 
@@ -94,15 +96,15 @@ Not only is it simple, it would allow the implementation to have greater control
 It is imperative that the table remains append-only, with the only exception that elements in the `contents` column may be redacted, as it is not essential (TODO: investigate).
 
 
-## The Room 
+### The Room 
 A room is just a collection of Merkle DAGs, synchronized (?) over the Gossip protocol.
 
-### Rules
+#### Rules
 
 - It is IMPERATIVE that it remains **append-only**. Participants can only add new elements, never, ever change any prior ones (with few exceptions). This is in order to avoid conflicts altogether. *Any commit that changes history **must** be rejected.*
 - Changes must follow a set of rules in order to be accepted (sent by valid participant in the room, signed by sender, et cetera), though this isn't required for the MVP.
 
-### Conflict resolution
+#### Conflict resolution
 
 When a fork unavoidably happens (network momentarily splits in two, users send messages at the same time), we don't try to resolve it into a single unified timeline, instead we keep the timeline as a tree.
 
@@ -119,7 +121,7 @@ In a nutshell: **determinism is king.**
 |Unequal branch lengths|Favor longer branch|
 |Equal branch lengths|Favor branch with lower hash|
 
-## Message
+#### Message
 A message is just a new node appended to the latest one, in the `contents` field of the commit lives the actual message information in CJSON. For example:
 ```json
 // Example commit 97993ee036
@@ -130,47 +132,47 @@ A message is just a new node appended to the latest one, in the `contents` field
 }
 ```
 
-### Types
+##### Types
 
-#### m.text
+###### m.text
 A simple plaintext (?) message.
 
-##### Fields
+####### Fields
 - `body`: The body of the text message.
 - `time`: The time (in Unix Epoch) that the message was sent.
 
-#### m.redact
+###### m.redact
 **WARNING: OUT OF SCOPE FOR MVP**
 - `hash`: The hash of the message we want to redact.
 
-### Sending
+##### Sending
 
 Below is an example of how a node would send a message, given a Gossip network:
 
-#### 1. Generation
+###### 1. Generation
 It all starts when one node (let's call it Node A) wants to send a message (add a new node), this could also be a heartbeat to show it’s still alive, or a new update it just pulled from another neighbor who has just made a change to the repository.
 
-#### 2. Selection (Gossip)
+###### 2. Selection (Gossip)
 Alice now has a different hash for its latest node, so now it is "infective." Instead of telling everyone at once (which would be full-mesh and expensive), Alice picks a small, random set of neighbors from her list.
 
-#### 3. Exchange
+###### 3. Exchange
 Alice sends an IHAVE message to its neighbors with the hash of the latest node. The neighbors will compare their latest hash with the hash that Alice has provided.
 
-#### 4. Replication
+###### 4. Replication
 Bob's latest hash is HASH_D, which is different from Alice's latest hash. He checks if Alice's version of the timeline is newer or older (older would mean the node hash already exists in his message history). If Alice's timeline is newer, he will sync his timeline with Alice's.
 
 Refer to the **Synchronization** section.
 
-#### 5. Spread
+###### 5. Spread
 This is where the magic happens. Alice's neighbors now all have the message. In the next cycle, they themselves will each pick 3 random neighbors and share the message.
 
 Eventually, Alice's timeline will be replicated across every member of the room.
 
-## Synchronization (Three-Pass Protocol)
+### Synchronization (Three-Pass Protocol)
 
 To ensure maximum security and bandwidth efficiency, Gitalong uses a stateless three-pass sync. Let's say that Alice wants to syncronize data from Bob:
 
-### Pass 1: Discovery (Bottom-Up)
+#### Pass 1: Discovery (Bottom-Up)
 **Direction:** Latest -> Common Ancestor
 **Goal:** Identify the gap between Alice and Bob.
 * Alice requests the parent of Bob's latest `node_hash`.
@@ -179,7 +181,7 @@ To ensure maximum security and bandwidth efficiency, Gitalong uses a stateless t
 
 ##### Why: Alice needs to know in advance the latest node they have in common.
 
-### Pass 2: The Skeleton (Top-Down)
+#### Pass 2: The Skeleton (Top-Down)
 **Direction:** Common Ancestor → Latest
 **Goal:** Verify structural integrity (Orphan Protection).
 * Alice requests the nodes in order, starting from the common ancestor's child.
@@ -189,7 +191,7 @@ To ensure maximum security and bandwidth efficiency, Gitalong uses a stateless t
 
 ###### Why: Going from top to bottom means that even if Bob is malicious or their connection cuts short, Alice will be able to hook up all of the nodes to her tree. It is resistant to orphan branch attacks.
 
-### Pass 3: The Meat (Bottom-Up)
+#### Pass 3: The Meat (Bottom-Up)
 **Direction:** Latest → Common Ancestor
 **Goal:** Data retrieval and Privacy (Redaction Awareness).
 * Alice iterates through her `PENDING` nodes starting from the most recent.
