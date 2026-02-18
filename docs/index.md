@@ -28,10 +28,15 @@ Distributed systems don't work like that. Even though you CAN spend hours resolv
 
 Other options very commonly don't even provide syncing logic.
 
-## 1. Core Protocol
+## Core Protocol
 
-### Room Storage (Merkle DAG)
+### Merkle DAG Storage
 Our Merkle DAG implementation focuses on structural integrity while allowing for data privacy. By separating the "Timeline" (Nodes) from the "Payload" (Blobs), we can delete message content without breaking the cryptographic chain.
+
+Our Merkle DAG implementation needs to:
+- Support multiple trees, each identified by their respective root node's hash.
+- Be strictly append-only.
+- Keep nodes (cryptographic relationship) and blobs (event contents) separate.
 
 #### Overview
 
@@ -42,7 +47,7 @@ This table is strictly **append-only**. It defines the sequence of events.
 | Key | Type | Description |
 |-|-|-|
 | **hash** | SHA256 (PK) | Primary key. A hash of `contents_ref + parent_keys[]` |
-| **contents_ref** | SHA256 (FK) | A hash of the `contents` CJSON object, and a primary key to its corresponding element in the `blobs` table. |
+| **contents_ref** | SHA256 (FK) | A hash and foreign key pointing to the `data` column in the `blobs` table, which is in itself a CJSON object. |
 
 **2. The `edges` Table (The Relations)**
 
@@ -97,11 +102,15 @@ It is imperative that the table remains append-only, with the only exception tha
 
 
 ### The Room 
-A room is just a collection of Merkle DAGs, synchronized (?) over the Gossip protocol.
+A room is a collection of trees in a **Merkle DAG** working together to offer functionality. There is only one mandatory tree, the `state` tree, which is the source of truth and main tree. Its job is to define define everything related to the room (title, permissions, membership).
+
+Any other trees in the room are optional and thus are required to specify a reference to the latest state tree node for each new node.
+
+A chat room for example, will have a state tree (what the room is, who joined, who is banned), which will point to another tree, the **timeline tree** (the messages).
 
 #### Rules
 
-- It is IMPERATIVE that it remains **append-only**. Participants can only add new elements, never, ever change any prior ones (with few exceptions). This is in order to avoid conflicts altogether. *Any commit that changes history **must** be rejected.*
+- It is IMPERATIVE that it remains **append-only**. Participants can only add new elements, never ever change any prior ones (with few exceptions). This is in order to avoid conflicts altogether. *Any commit that changes history **must** be rejected.*
 - Changes must follow a set of rules in order to be accepted (sent by valid participant in the room, signed by sender, et cetera), though this isn't required for the MVP.
 
 #### Conflict resolution
