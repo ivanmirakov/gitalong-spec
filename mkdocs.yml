@@ -4,19 +4,43 @@ site_author: Gitalong
 repo_url: https://github.com/ivanmirakov/gitalong-spec
 
 theme:
-  name: readthedocs
+  name: material
   features:
     - navigation.sections
     - navigation.tracking
+    - navigation.instant
+    - navigation.tabs
+    - search.suggest
+    - search.highlight
     - toc.follow
     - content.code.copy
-  font:
-    text: Ubuntu
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
 
 plugins:
   - search
+  - mermaid2
+  - git-revision-date-localized:
+      type: timeago
 
 markdown_extensions:
   - toc:
       permalink: true # Adds those clickable icons to headers
   - admonition # For "Note" and "Warning" boxes I will definitely use
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true

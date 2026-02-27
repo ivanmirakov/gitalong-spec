@@ -1,0 +1,16 @@
+# venv
+venv/
+.venv/
+env/
+
+# MkDocs build output
+site/
+
+# cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# optional but nice to have
+.DS_Store
+Thumbs.db
