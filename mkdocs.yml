@@ -42,5 +42,6 @@ markdown_extensions:
       permalink: true # Adds those clickable icons to headers
   - admonition # For "Note" and "Warning" boxes I will definitely use
   - pymdownx.snippets
+  - pymdownx.details
   - pymdownx.tabbed:
       alternate_style: true
