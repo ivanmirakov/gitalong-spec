@@ -54,19 +54,18 @@ A node may look like this:
     There is actually no need for different blobs tables to be used for each instance, you may share a single blobs table across all instances. However, we currently keep a blob table for each instance.
 
 !!! example
-
-An instance's nodes may look like this:
-    
-```mermaid
-graph LR
-    A1["<b>NODE 1</b><br/><br/>H: 2763...<br/>C: blob_1"]
-    A2["<b>NODE 2</b><br/><br/>H: 2763...<br/>C: blob_2"]
-    A3["<b>NODE 3</b><br/><br/>H: 2763...<br/>C: blob_3"]
-    
-    A1 --> A2
-    A2 --> A3
-    A3 --> A4["<b>NODE 3</b><br/><br/>H: 2763...<br/>C: blob_4"]
-```
+    An instance's nodes may look like this:
+        
+    ```mermaid
+    graph LR
+        A1["<b>NODE 1</b><br/><br/>H: 2763...<br/>C: blob_1"]
+        A2["<b>NODE 2</b><br/><br/>H: 2763...<br/>C: blob_2"]
+        A3["<b>NODE 3</b><br/><br/>H: 2763...<br/>C: blob_3"]
+        
+        A1 --> A2
+        A2 --> A3
+        A3 --> A4["<b>NODE 3</b><br/><br/>H: 2763...<br/>C: blob_4"]
+    ```
 
 And the blobs may look like this:
     

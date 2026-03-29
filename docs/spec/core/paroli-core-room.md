@@ -30,13 +30,11 @@ This approach makes Paroli mostly resistant to state-lag attacks, where an attac
 
 ### Examples
 
-#### Linear History (Simple)
+!!! example "Linear history (simple)"
+    --8<-- "includes/diagram-linear.mmd"
 
---8<-- "includes/diagram-linear.mmd"
-
-#### Forked History (Complex)
-
---8<-- "includes/diagram-forked.mmd"
+!!! example "Forked history (complex)"
+    --8<-- "includes/diagram-forked.mmd"
 
 ### Rules
 
